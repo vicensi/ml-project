@@ -1,0 +1,11 @@
+# Full application stack (Phases 2-7) — resolved for Python 3.11. Airflow is NOT here: it runs in
+# its own image installed with the official Airflow constraints file (see docs/ARCHITECTURE.md).
+-r base.in
+feast[redis,postgres]
+mlflow
+evidently
+scikit-learn
+fastapi
+uvicorn
+streamlit
+httpx

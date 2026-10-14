@@ -1,0 +1,7 @@
+# Phase 1 runtime. Later phases add feast/mlflow/... (see requirements/stack.in)
+pandas>=2.2,<3  # Feast/Evidently in the full stack resolve to pandas 2.x
+numpy>=2.0,<2.5
+pydantic
+pydantic-settings
+sqlalchemy>=2.0,<2.1
+psycopg2-binary
