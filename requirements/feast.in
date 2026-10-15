@@ -1,0 +1,4 @@
+# Phase 2 runtime = base + Feast (Postgres offline store, Redis online store).
+# Pins are constrained by stack.txt so every image agrees with the full-stack resolution.
+-r base.in
+feast[redis,postgres]

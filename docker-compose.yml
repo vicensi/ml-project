@@ -1,5 +1,5 @@
-# Phase 1 stack: PostgreSQL + Redis + one-shot jobs. MLflow, Airflow, API and Streamlit are
-# added in later phases (see docs/ARCHITECTURE.md). Requires a .env file (cp .env.example .env).
+# Phases 1-2 stack: PostgreSQL + Redis + one-shot jobs (ingest, features, tests). MLflow, Airflow,
+# API and Streamlit are added in later phases (see docs/ARCHITECTURE.md). Requires a .env file (cp .env.example .env).
 name: tsplatform
 
 x-app-env: &app-env
@@ -15,6 +15,22 @@ x-app-env: &app-env
   TSP_GEN_N_HOURS: ${TSP_GEN_N_HOURS:-4368}
   TSP_GEN_START: ${TSP_GEN_START:-2025-01-01T00:00:00}
   TSP_GEN_ANOMALY_RATE: ${TSP_GEN_ANOMALY_RATE:-0.002}
+
+# Read by feast_repo/feature_store.yaml through ${VAR} expansion (no credentials in the repo).
+x-feast-env: &feast-env
+  APP_DB_HOST: postgres
+  APP_DB_PORT: "5432"
+  APP_DB_NAME: ${APP_DB_NAME}
+  APP_DB_USER: ${APP_DB_USER}
+  APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+  APP_DB_SSLMODE: ${APP_DB_SSLMODE:-disable}   # the local postgres container has no TLS
+  FEAST_DB_HOST: postgres
+  FEAST_DB_PORT: "5432"
+  FEAST_DB_NAME: ${FEAST_DB_NAME}
+  FEAST_DB_USER: ${FEAST_DB_USER}
+  FEAST_DB_PASSWORD: ${FEAST_DB_PASSWORD}
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
 
 services:
   postgres:
@@ -73,16 +89,33 @@ services:
       postgres: { condition: service_healthy }
     command: ["python", "-m", "tsplatform.cli", "ingest"]
 
+  # Feature pipeline steps (one-shot). Order: ingest -> build-features -> feast-apply -> feast-materialize
+  #   docker compose --profile jobs run --rm features python -m tsplatform.cli build-features
+  #   docker compose --profile jobs run --rm features python -m tsplatform.cli feast-apply
+  #   docker compose --profile jobs run --rm features python -m tsplatform.cli feast-materialize
+  #   docker compose --profile jobs run --rm features python -m tsplatform.cli verify-features
+  features:
+    profiles: ["jobs"]
+    build: { context: ., target: features }
+    environment:
+      <<: [*app-env, *feast-env]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    command: ["python", "-m", "tsplatform.cli", "--help"]
+
   # Unit + integration tests against the real Postgres test database. Run with:
   #   docker compose --profile test run --rm tests
   tests:
     profiles: ["test"]
     build: { context: ., target: dev }
     environment:
-      <<: *app-env
+      <<: [*app-env, *feast-env]
       TSP_TEST_DATABASE_URL: postgresql+psycopg2://${APP_DB_USER}:${APP_DB_PASSWORD}@postgres:5432/${TEST_DB_NAME}
+      TSP_TEST_REDIS: redis:6379
     depends_on:
       postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
     command: ["pytest", "-q"]
 
 volumes:

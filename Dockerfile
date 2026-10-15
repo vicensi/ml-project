@@ -10,7 +10,17 @@ RUN useradd --create-home --uid 10001 app && chown -R app /app
 USER app
 CMD ["python", "-m", "tsplatform.cli", "--help"]
 
-FROM base AS dev
+# Phase 2: + Feast. Used by the feature jobs; connection settings arrive via environment variables.
+FROM base AS features
+USER root
+COPY requirements/features.txt requirements/features.txt
+RUN pip install -r requirements/features.txt
+COPY feast_repo ./feast_repo
+RUN chown -R app /app
+ENV TSP_FEAST_REPO_PATH=/app/feast_repo
+USER app
+
+FROM features AS dev
 USER root
 COPY requirements/dev.txt requirements/dev.txt
 RUN pip install -r requirements/dev.txt

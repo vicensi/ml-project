@@ -25,6 +25,7 @@ from sqlalchemy import (
 metadata = MetaData()
 
 RAW_SCHEMA = "raw"
+FEATURES_SCHEMA = "features"
 
 raw_observations = Table(
     "observations",
@@ -51,4 +52,23 @@ dataset_registry = Table(
     Column("ts_max", DateTime, nullable=False),
     Column("created_at", DateTime, nullable=False, server_default=func.now()),
     schema=RAW_SCHEMA,
+)
+
+# Offline source of the Feast FeatureView. Written by the feature build step (idempotent upsert);
+# Feast reads it with point-in-time joins. Only complete rows exist (see contracts/features.py).
+series_features = Table(
+    "series_features",
+    metadata,
+    Column("series_id", String(64), primary_key=True),
+    Column("event_timestamp", DateTime, primary_key=True),
+    Column("value_lag_1", Float, nullable=False),
+    Column("value_lag_2", Float, nullable=False),
+    Column("value_lag_24", Float, nullable=False),
+    Column("value_lag_168", Float, nullable=False),
+    Column("rolling_mean_24", Float, nullable=False),
+    Column("rolling_std_24", Float, nullable=False),
+    Column("rolling_mean_168", Float, nullable=False),
+    Column("hour_of_day", Integer, nullable=False),
+    Column("day_of_week", Integer, nullable=False),
+    schema=FEATURES_SCHEMA,
 )

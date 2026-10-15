@@ -109,6 +109,8 @@ class Settings(BaseSettings):
     db_password: SecretStr = SecretStr("")
     db_url: str | None = None
 
+    feast_repo_path: str = "feast_repo"  # relative to the working dir; /app/feast_repo in Docker
+
     gen_seed: int = 42
     gen_n_series: int = 5
     gen_n_hours: int = 24 * 7 * 26
