@@ -1,0 +1,25 @@
+# Values come from environment variables (os.path.expandvars): no credentials in the repo.
+# Passwords must be URL-safe because the registry path is a SQLAlchemy URL.
+project: tsplatform
+provider: local
+entity_key_serialization_version: 3
+
+registry:                      # metadata (definitions, materialisation intervals) in its OWN database
+  registry_type: sql
+  path: postgresql+psycopg://${FEAST_DB_USER}:${FEAST_DB_PASSWORD}@${FEAST_DB_HOST}:${FEAST_DB_PORT}/${FEAST_DB_NAME}
+  cache_ttl_seconds: 30
+
+offline_store:                 # history of features -> training / reference data
+  type: postgres
+  host: ${APP_DB_HOST}
+  port: ${APP_DB_PORT}
+  database: ${APP_DB_NAME}
+  db_schema: features
+  user: ${APP_DB_USER}
+  password: ${APP_DB_PASSWORD}
+  sslmode: ${APP_DB_SSLMODE}   # Feast defaults to TLS; the local postgres container has none -> 'disable'.
+                               # Production: 'require' or 'verify-full'.
+
+online_store:                  # latest value per series -> low-latency serving
+  type: redis
+  connection_string: ${REDIS_HOST}:${REDIS_PORT}

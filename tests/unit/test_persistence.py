@@ -4,10 +4,11 @@ from tsplatform.data_access.repositories import DatasetRegistry, RawObservationR
 from tsplatform.data_generation import build_dataset_info, generate_dataset
 
 
-def test_upsert_is_idempotent(sqlite_engine, small_cfg):
+def test_upsert_is_idempotent(sqlite_engine, small_cfg, monkeypatch):
+    monkeypatch.setattr("tsplatform.data_access.repositories._MAX_PARAMS", 3000)  # force many chunks
     df = generate_dataset(small_cfg)
     info = build_dataset_info(small_cfg, df)
-    repo = RawObservationRepository(sqlite_engine, chunk_size=500)
+    repo = RawObservationRepository(sqlite_engine)
     repo.upsert(df, info.dataset_id)
     repo.upsert(df, info.dataset_id)  # retry / re-run
     assert repo.count() == len(df)
